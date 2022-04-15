@@ -15,4 +15,4 @@ Se almacenó la base de datos en Clever Cloud, las credenciales están en la con
 
 Notas: El proyecto no fué concluido ya que no se contaba con conocimientos de Vuejs y en el back suelo utilizar postgres en cuanto a SQL y Mongodb.
 
-Aún asi se realizó lo necesario para la documentación e implementación de la aplicación.
+Aún asi se realizó lo necesario para la documentación e implementación de la aplicación en el tiempo otorgado.
