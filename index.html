@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/@mdi/font@5.x/css/materialdesignicons.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.min.css">  
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui">
+    <style>
+    #app{
+        background-color:#CFD8DC;      
+    }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <v-app>
+        <v-main>   
+        <!--<h2 class="text-center">CRUD usando APIREST con Node JS</h2>-->
+        <!-- Botón CREAR -->                
+            <v-card class="mx-auto mt-5" color="transparent" max-width="1280" elevation="0">            
+            <v-btn class="mx-2" fab dark color="#ffd527" @click="formNuevo()"><v-icon dark>mdi-plus</v-icon></v-btn>           
+            <!-- Tabla y formulario -->
+            <v-simple-table class="mt-5">
+                <template v-slot:default>
+                    <thead>
+                        <tr class="blue darken-3" v-for="client in clients" :key="client.id">
+                            <th class="white--text">ID: {{client.id}}</th>
+                            <th class="white--text">NOMBRE: {{ client.nombre }}</th>
+                            <th class="white--text">TELEFONO: {{ client.telefono }}</th>
+                            <th class="white--text">ULTIMO PAGO: {{ client.ultimo_pago }}</th>
+                            <th class="white--text text-center">ACCIONES</th>
+                        </tr>
+                    </thead>
+                    <tbody >
+                        <!-- <tr v-for="client in clients" :key="client.id"> -->
+                        <tr v-for="pago in pagos" :key="pago.id">
+                            <td>{{ pago.id }}</td>
+                            <td>{{ pago.cliente }}</td>
+                            <td>{{ pago.monto }}</td>
+                            <td>{{ pago.fecha_creacion }}</td>
+                            <td>
+                                <v-btn class="pink" dark small fab  @click="formEditar(pago.id, pago.cliente, pago.monto, pago.fecha_creacion)"><v-icon>mdi-pencil</v-icon></v-btn>
+                                <v-btn class="error" fab dark small @click="borrar(pago.id)"><v-icon>mdi-delete</v-icon></v-btn>
+                            </td>
+                        </tr>
+                    </tbody>
+                </template>
+            </v-simple-table>
+            </v-card>        
+        <!-- Componente de Diálogo para CREAR y EDITAR -->
+        <v-dialog v-model="dialog" max-width="500">        
+            <v-card>
+            <v-card-title class="blue darken-3 white--text">Cliente</v-card-title>    
+            <v-card-text>            
+                <v-form>             
+                <v-container>
+                    <v-row>
+                    <input v-model="client.id" hidden></input>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="client.nombre" label="Nombre" solo required>{{client.nombre}}</v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="client.telefono" label="Telefono" type="number" solo required>{{client.telefono}}</v-text-field>
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="client.ultimo_pago" label="Ultimo-pago" type="date" solo required>{{client.ultimo_pago}}</v-text-field>
+                    </v-col>
+                    </v-row>
+                </v-container>            
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer></v-spacer>
+                <v-btn @click="dialog=false" color="blue-grey" dark>Cancelar</v-btn>
+                <v-btn @click="guardar()" type="submit" color="blue darken-3" dark>Guardar</v-btn>
+            </v-card-actions>
+            </v-form>
+            </v-card>
+        </v-dialog>
+        </v-main>
+        </v-app>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.x/dist/vue.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vuetify@2.x/dist/vuetify.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.20.0/axios.js" integrity="sha512-nqIFZC8560+CqHgXKez61MI0f9XSTKLkm0zFVm/99Wt0jSTZ7yeeYwbzyl0SGn/s8Mulbdw+ScCG41hmO2+FKw==" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@10.0.2/dist/sweetalert2.all.min.js"></script>
+
+    <script>
+        let url = 'http://localhost:4000/api/clients/';
+        let urlPagos = 'http://localhost:4000/api/pagos/';
+        new Vue({
+        el: '#app',
+        vuetify: new Vuetify(),
+        data() {
+            return {            
+                clients: [],
+                pagos: [],
+                dialog: false,
+                operacion: '',            
+                client:{
+                    id: null,
+                    nombre:'',
+                    telefono:'',
+                    ultimo_pago:''
+                },
+                pago: {
+                    id: null,
+                    cliente: '',
+                    monto:'',
+                    fecha_creacion:''
+                }          
+            }
+        },
+        created(){               
+                this.mostrar()
+                this.mostrarPagos()
+                this.formatearFecha()
+            },  
+            formatearFecha(fecha) {
+                const nuevaFecha = new Date( fecha.split('T')[0].split('-') ); //Necesario este formateo de fecha para que si funcione correctamente
+                const opciones = {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                }
+                return nuevaFecha.toLocaleDateString('es-Es', opciones)
+            },
+
+        methods:{          
+            // formatearFecha:function() {
+            //     const nuevaFecha = new Date( fecha.split('T')[0].split('-') ); //Necesario este formateo de fecha para que si funcione correctamente
+            //     const opciones = {
+            //         weekday: 'long',
+            //         year: 'numeric',
+            //         month: 'long',
+            //         day: 'numeric'
+            //     }
+            //     return nuevaFecha.toLocaleDateString('es-Es', opciones)
+            // },
+                //MÉTODOS PARA EL CRUD
+                // CLIENTES:
+                mostrar:function(){
+                axios.get(url)
+                .then(response =>{
+                    this.clients = response.data;                   
+                })
+                },
+                crear:function(){
+                    let parametros = { nombre:this.client.nombre, precio:this.client.telefono, ultimo_pago:formatearFecha(this.client.ultimo_pago) };                
+                    axios.post(url, parametros)
+                    .then(response =>{
+                    this.mostrar();
+                    });     
+                    this.client.nombre="";
+                    this.client.telefono="";
+                    this.client.ultimo_pago="";
+                },                        
+                editar: function(){
+                let parametros = { nombre:this.client.nombre, precio:this.client.telefono, ultimo_pago:this.client.ultimo_pago, id:this.client.id};                            
+                //console.log(parametros);                   
+                    axios.put(url+this.client.id, parametros)                            
+                    .then(response => {                                
+                        this.mostrar();
+                    })                
+                    .catch(error => {
+                        console.log(error);            
+                    });
+                },
+                borrar:function(id){
+                Swal.fire({
+                    title: '¿Confirma eliminar el registro?',   
+                    confirmButtonText: `Confirmar`,                  
+                    showCancelButton: true,                          
+                }).then((result) => {                
+                    if (result.isConfirmed) {      
+                        //procedimiento borrar
+                        axios.delete(url+id)
+                        .then(response =>{           
+                            this.mostrar();
+                        });      
+                        Swal.fire('¡Eliminado!', '', 'success')
+                    } else if (result.isDenied) {                  
+                    }
+                });              
+                },
+
+                //Botones y formularios
+                guardar:function(){
+                if(this.operacion=='crear'){
+                    this.crear();                
+                }
+                if(this.operacion=='editar'){ 
+                    this.editar();                           
+                }
+                this.dialog=false;                        
+                }, 
+                formNuevo:function () {
+                this.dialog=true;
+                this.operacion='crear';
+                this.client.nombre="";
+                this.client.telefono="";
+                this.client.ultimo_pago="";
+                },
+                formEditar:function(id, nombre, telefono, ultimo_pago){              
+                this.client.id = id;
+                this.client.nombre = nombre;                            
+                this.client.telefono = telefono;
+                this.client.ultimo_pago = ultimo_pago;                      
+                this.dialog=true;                            
+                this.operacion='editar';
+                },
+
+
+                //PAGOS---------------------//
+                //MÉTODOS PARA EL CRUD
+                mostrarPagos:function(){            
+                    axios.get(urlPagos)
+                .then(response =>{
+                    this.pagos = response.data;  
+                })
+                },
+                crearPago:function(){
+                    let parametros = { cliente:this.pago.cliente, monto:this.pago.monto, fecha_creacion:formatearFecha(this.pago.fecha_creacion) };                
+                    axios.post(urlPagos, parametros)
+                    .then(response =>{
+                    this.mostrarPagos();
+                    });     
+                    this.pago.cliente="";
+                    this.pago.monto="";
+                    this.pago.fecha_creacion="";
+                },                        
+                editarPago: function(){
+                let parametros = { cliente:this.pago.cliente, monto:this.pago.monto, fecha_creacion:this.pago.fecha_creacion, id:this.pago.id};                            
+                //console.log(parametros);                   
+                    axios.put(url+this.pago.id, parametros)                            
+                    .then(response => {                                
+                        this.mostrarPagos();
+                    })                
+                    .catch(error => {
+                        console.log(error);            
+                    });
+                },
+                borrarPago:function(id){
+                Swal.fire({
+                    title: '¿Confirma eliminar el pago?',   
+                    confirmButtonText: `Confirmar`,                  
+                    showCancelButton: true,                          
+                }).then((result) => {                
+                    if (result.isConfirmed) {      
+                        //procedimiento borrar
+                        axios.delete(url+id)
+                        .then(response =>{           
+                            this.mostrarPagos();
+                        });      
+                        Swal.fire('¡Eliminado!', '', 'success')
+                    } else if (result.isDenied) {                  
+                    }
+                });              
+                },
+
+                //Botones y formularios
+                guardar:function(){
+                if(this.operacion=='crear'){
+                    this.crearPago();                
+                }
+                if(this.operacion=='editar'){ 
+                    this.editarPago();                           
+                }
+                this.dialog=false;                        
+                }, 
+                formNuevoPago:function () {
+                this.dialog=true;
+                this.operacion='crear';
+                this.pago.cliente="";
+                this.pago.monto="";
+                this.pago.fecha_creacion="";
+                },
+                formEditarPago:function(id, cliente, monto, fecha_creacion){              
+                this.pago.id = id;
+                this.pago.cliente = cliente;                            
+                this.pago.monto = monto;
+                this.pago.fecha_creacion = fecha_creacion;                      
+                this.dialog=true;                            
+                this.operacion='editar';
+                }
+        }      
+        });
+    </script>
+</body>
+</html> 
